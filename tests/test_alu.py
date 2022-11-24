@@ -1,9 +1,10 @@
 import unittest
-from pymtl3 import *
-from pymtl3.passes.backends.verilog import *
+from pymtl3 import DefaultPassGroup, Bits
+from pymtl3.passes.backends.verilog import VerilogTranslationImportPass, VerilogPlaceholderPass
 from src.rtl.OTTER_ALU import OTTER_ALU
 from src.common.consts import *
 
+from os import path
 from hypothesis import given, strategies as st
 
 BITWIDTH = 32

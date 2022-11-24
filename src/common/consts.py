@@ -1,3 +1,24 @@
+from pymtl3 import mk_bitstruct, mk_bits
+
+opcode_t = mk_bits( 7 )
+
+instr_t = mk_bitstruct("instr_t", {
+    "opcode": opcode_t,
+    "rs1": mk_bits(5),
+    "rs2": mk_bits(5),
+    "rd": mk_bits(5),
+    "rs1_used": mk_bits(1),
+    "rs2_used": mk_bits(1),
+    "rd_used": mk_bits(1),
+    "alu_fun": mk_bits(4),
+    "memWrite": mk_bits(1),
+    "memRead2": mk_bits(1),
+    "regWrite": mk_bits(1),
+    "rf_wr_sel": mk_bits(2),
+    "func3": mk_bits(3),
+    "pc": mk_bits(32)}
+)
+
 # OPCODES
 LUI = 0b0110111
 AUIPC = 0b0010111

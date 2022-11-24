@@ -29,7 +29,7 @@ module OTTER_ALU(ALU_fun, A, B, ALUOut);
 
 class OTTER_ALU(Component, Placeholder):
     def construct(s):
-        s.ALU_fun = InPort(4)
-        s.A = InPort(32)
-        s.B = InPort(32)
-        s.ALUOut = OutPort(32)
+        s.op = InPort(4)
+        s.a = InPort(32)
+        s.b = InPort(32)
+        s.out = OutPort(32)
