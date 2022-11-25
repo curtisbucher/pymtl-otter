@@ -313,6 +313,7 @@ from ProgCount import ProgCount
 from CU_Decoder import OTTER_CU_Decoder
 from registerFile import OTTER_registerFile
 from OTTER_ALU import OTTER_ALU
+from bram_dualport import OTTER_mem_byte
 from common.util import *
 from common.consts import *
 
@@ -621,34 +622,84 @@ class OTTER_MCU(Component):
                 s.ex_mem_rs2 <<= s.rs2_forwarded
 
         # Memory stage ------------------------------------------------------------
-        """
-        instr_t mem_wb_inst;
-        logic [31:0] mem_wb_aluRes;
-
-        logic mem_enable;
-        assign mem_Wenable = !ex_mem_invalid && ex_mem_inst.memWrite;
-        assign mem_Renable = !ex_mem_invalid && ex_mem_inst.memRead2;
-
-        OTTER_mem_byte #(14) memory  (.MEM_CLK(CLK),.MEM_ADDR1(pc),.MEM_ADDR2(ex_mem_aluRes),.MEM_DIN2(ex_mem_rs2),
-                                    .MEM_WRITE2(mem_Wenable),.MEM_READ1(memRead1),.MEM_READ2(mem_Renable),
-                                    .ERR(),.MEM_DOUT1(IR),.MEM_DOUT2(mem_data),.IO_IN(IOBUS_IN),.IO_WR(IOBUS_WR),.MEM_SIZE(ex_mem_inst.func3[1:0]),.MEM_SIGN(ex_mem_inst.func3[2]));
-
-        assign IOBUS_ADDR = ex_mem_aluRes;
-        assign IOBUS_OUT = ex_mem_rs2;
-
-        always_ff @(posedge CLK) begin
-                if(!stall_mem) begin
-                    mem_wb_inst <= ex_mem_inst;
-                    mem_wb_aluRes <= ex_mem_aluRes;
-                end
-        end
-        """
         s.mem_wb_inst = Wire(instr_t)
         s.mem_wb_aluRes = Wire(32)
 
         s.mem_enable = Wire(1)
         s.mem_Wenable = (not s.ex_mem_invalid) and s.ex_mem_inst.memWrite
         s.mem_Renable = (not s.ex_mem_invalid) and s.ex_mem_inst.memRead2
+
+        s.memory = OTTER_mem_byte(
+            MEM_ADDR1=s.pc,
+            MEM_ADDR2=s.ex_mem_aluRes,
+            MEM_DIN2=s.ex_mem_rs2,
+            MEM_WRITE2=s.mem_Wenable,
+            MEM_READ1=s.memRead1,
+            MEM_READ2=s.mem_Renable,
+            # ERR=,
+            MEM_DOUT1=s.IR,
+            MEM_DOUT2=s.mem_data,
+            IO_IN=s.IOBUS_IN,
+            IO_WR=s.IOBUS_WR,
+            MEM_SIZE=s.ex_mem_inst.func3[1:0],
+            MEM_SIGN=s.ex_mem_inst.func3[2]
+        )
+
+        s.IOBUS_ADDR = s.ex_mem_aluRes
+        s.IOBUS_OUT = s.ex_mem_rs2
+
+        @update_ff
+        def update_mem_wb():
+            if not s.stall_mem:
+                s.mem_wb_inst <<= s.ex_mem_inst
+                s.mem_wb_aluRes <<= s.ex_mem_aluRes
+
+        # Writeback stage ----------------------------------------------------------
+
+        s.wb_enable = (~s.stall_wb) and (~s.mem_wb_invalid) and s.mem_wb_inst.regWrite
+
+        # creating multiplexor to select reg write back data
+        s.rfIn = Wire(32)
+        @update
+        def mux_rfIn():
+            if s.mem_wb_inst.rf_wr_sel == 0:
+                s.rfIn = s.mem_wb_inst.pc + 4
+            elif s.mem_wb_inst.rf_wr_sel == 1:
+                s.rfIn = s.csr_reg
+            elif s.mem_wb_inst.rf_wr_sel == 2:
+                s.rfIn = s.mem_data
+            elif s.mem_wb_inst.rf_wr_sel == 3:
+                s.rfIn = s.mem_wb_aluRes
+
+        # Forwarding Logic ---------------------------------------------------------
+        s.valid_forward_from_mem = s.ex_mem_inst.regWrite and ~s.ex_mem_invalid
+        s.valid_forward_from_wb = s.mem_wb_inst.regWrite and ~s.mem_wb_invalid
+
+        s.opA_forwarded = s.de_ex_opA
+        s.opB_forwarded = s.de_ex_opB
+        s.rs2_forwarded = s.de_ex_rs2
+
+        @update
+        def mux_opA_forwarded():
+            if s.valid_forward_from_mem and (s.ex_mem_inst.rd == s.de_ex_inst.rs1) and s.de_ex_inst.rs1_used:
+                s.opA_forwarded = s.ex_mem_aluRes
+            elif s.valid_forward_from_wb and (s.mem_wb_inst.rd == s.de_ex_inst.rs1) and s.de_ex_inst.rs1_used:
+                s.opA_forwarded = s.rfIn
+
+            if s.valid_forward_from_mem and (s.ex_mem_inst.rd == s.de_ex_inst.rs2) and s.de_ex_inst.rs2_used:
+                if s.de_ex_inst.opcode != STORE:
+                    s.opB_forwarded = s.ex_mem_aluRes
+                else:
+                    s.rs2_forwarded = s.ex_mem_aluRes
+            elif s.valid_forward_from_wb and (s.mem_wb_inst.rd == s.de_ex_inst.rs2) and s.de_ex_inst.rs2_used:
+                if s.de_ex_inst.opcode != STORE:
+                    s.opB_forwarded = s.rfIn
+                else:
+                    s.rs2_forwarded = s.rfIn
+
+
+
+
 
 
 
