@@ -8,6 +8,6 @@ def signed_lt(A: Wire, B: Wire) -> bool:
     B_neg = B[31]
 
     return (
-        (A_neg & ~B_neg) | # A is negative, B is positive
-        ((~A_neg & ~B_neg) and A < B) # both are positive and A is smaller
+        (A_neg and not B_neg) | # A is negative, B is positive
+        (not (A_neg or B_neg) and A < B) # both are positive and A is smaller
     )
