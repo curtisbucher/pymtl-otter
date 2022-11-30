@@ -1,24 +1,24 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
-// Company: 
+// Company:
 // Engineer: J. Callenes
-// 
+//
 // Create Date: 01/27/2019 09:22:55 AM
-// Design Name: 
+// Design Name:
 // Module Name: CU_Decoder
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
+// Project Name:
+// Target Devices:
+// Tool Versions:
+// Description:
+//
+// Dependencies:
+//
 // Revision:
 // Revision 0.01 - File Created
 // Additional Comments:
-// 
+//
 //////////////////////////////////////////////////////////////////////////////////
-//`include "opcodes.svh"
+
 
 module OTTER_CU_Decoder(
     input [6:0] CU_OPCODE,
@@ -31,7 +31,7 @@ module OTTER_CU_Decoder(
     output logic CU_ALU_SRCA,
     output logic [1:0] CU_ALU_SRCB,
     output logic [3:0] CU_ALU_FUN,
-    output logic [1:0] CU_RF_WR_SEL  
+    output logic [1:0] CU_RF_WR_SEL
     //output logic [1:0] CU_PCSOURCE
     //output logic [1:0] CU_MSIZE
    );
@@ -47,8 +47,8 @@ module OTTER_CU_Decoder(
                    OP       = 7'b0110011,
                    SYSTEM   = 7'b1110011
         } opcode_t;
-        
-        
+
+
         typedef enum logic [2:0] {
                 Func3_CSRRW  = 3'b001,
                 Func3_CSRRS  = 3'b010,
@@ -59,10 +59,10 @@ module OTTER_CU_Decoder(
                 Func3_PRIV   = 3'b000       //mret
         } funct3_system_t;
 
-       
+
         opcode_t OPCODE;
         assign OPCODE = opcode_t'(CU_OPCODE);
-        
+
         logic brn_cond;
         //DECODING  (does not depend on state)  ////////////////////////////////////////////
        //SEPERATE DECODER
@@ -77,10 +77,10 @@ module OTTER_CU_Decoder(
 //                STORE: 4'b0;
                 default: CU_ALU_FUN = 4'b0;
             endcase
-            
+
             always_comb
             case(CU_FUNC3)
-                        3'b000: brn_cond = CU_BR_EQ;     //BEQ 
+                        3'b000: brn_cond = CU_BR_EQ;     //BEQ
                         3'b001: brn_cond = ~CU_BR_EQ;    //BNE
                         3'b100: brn_cond = CU_BR_LT;     //BLT
                         3'b101: brn_cond = ~CU_BR_LT;    //BGE
@@ -88,7 +88,7 @@ module OTTER_CU_Decoder(
                         3'b111: brn_cond = ~CU_BR_LTU;   //BGEU
                         default: brn_cond =0;
             endcase
-            
+
          always_comb
          begin
             //if(state==1 || state==2)
@@ -97,12 +97,12 @@ module OTTER_CU_Decoder(
                     JALR:    CU_RF_WR_SEL=0;
                     LOAD:    CU_RF_WR_SEL=2;
                     SYSTEM:  CU_RF_WR_SEL=1;
-                    default: CU_RF_WR_SEL=3; 
+                    default: CU_RF_WR_SEL=3;
                 endcase
-            //else CU_RF_WR_SEL=3;   
-          end   
-          
-          
+            //else CU_RF_WR_SEL=3;
+          end
+
+
          always_comb
          begin
          // if(state!=0)
@@ -116,12 +116,12 @@ module OTTER_CU_Decoder(
             endcase
           //else CU_ALU_SRCB=3;
          end
-         
-          
-        
-       assign CU_ALU_SRCA = (CU_OPCODE==LUI || CU_OPCODE==AUIPC) ? 1 : 0;
-                
 
-        //assign CU_MSIZE = CU_FUNC3[1:0];        
+
+
+       assign CU_ALU_SRCA = (CU_OPCODE==LUI || CU_OPCODE==AUIPC) ? 1 : 0;
+
+
+        //assign CU_MSIZE = CU_FUNC3[1:0];
 
 endmodule

@@ -1,7 +1,4 @@
-## TODO: REMEMBER THAT ALL SLICES WILL HABE TO BE CHANGED FROM VERILOG TO PYMTL.
-## DIFFERENCE IN INCLUSIVE / EXCLUSIVE SLICING
-## AND, OR, NOT may need to be replaced with &, |, ~
-from pymtl3 import Component, Wire, Bits, InPort, OutPort, update, update_ff, concat, sext
+from pymtl3 import Component, Wire, Bits, InPort, OutPort, update, update_ff, concat, sext, Bits12, Bits1
 from pymtl3.stdlib.basic_rtl.register_files import RegisterFile
 
 from src.rtl.ProgCount import ProgCount
@@ -132,24 +129,26 @@ class OTTER_MCU(Component):
         s.de_inst.pc //= s.if_de_pc
         s.de_inst.func3 //= s.IR[12:15]
 
-        s.de_inst.rs1_used //= (s.de_inst.rs1 != 0 and
-                                s.de_inst.opcode != LUI and
-                                s.de_inst.opcode != AUIPC and
-                                s.de_inst.opcode != JAL)
+        @update
+        def decode():
+            s.de_inst.rs1_used @= ( (s.de_inst.rs1 != 0) &
+                                    (s.de_inst.opcode != LUI) &
+                                    (s.de_inst.opcode != AUIPC) &
+                                    (s.de_inst.opcode != JAL))
 
-        s.de_inst.rs2_used //= (s.de_inst.rs2 != 0 and
-                                (s.de_inst.opcode == BRANCH or
-                                s.de_inst.opcode == STORE or
-                                s.de_inst.opcode == OP))
+            s.de_inst.rs2_used @= ((s.de_inst.rs2 != 0) &
+                                    ((s.de_inst.opcode == BRANCH) |
+                                    (s.de_inst.opcode == STORE) |
+                                    (s.de_inst.opcode == OP)))
 
-        s.de_inst.rd_used //= (s.de_inst.opcode != BRANCH and
-                                s.de_inst.opcode != STORE)
+            s.de_inst.rd_used @= ((s.de_inst.opcode != BRANCH) &
+                                    (s.de_inst.opcode != STORE))
 
-        s.de_inst.regWrite //= (s.de_inst.opcode != BRANCH and
-                                s.de_inst.opcode != STORE)
+            s.de_inst.regWrite @= ((s.de_inst.opcode != BRANCH) &
+                                    (s.de_inst.opcode != STORE))
 
-        s.de_inst.memWrite //= (s.de_inst.opcode == STORE)
-        s.de_inst.memRead2 //= (s.de_inst.opcode == LOAD)
+            s.de_inst.memWrite @= (s.de_inst.opcode == STORE)
+            s.de_inst.memRead2 @= (s.de_inst.opcode == LOAD)
 
         s.CU_DECODER = OTTER_CU_Decoder()
         s.CU_DECODER.CU_OPCODE //= s.opcode
@@ -209,25 +208,25 @@ class OTTER_MCU(Component):
             tmp1 = concat(s.IR[25:32], s.IR[7:12])  # concat can't be nested in sext
             s.S_immed @= sext(tmp1, 32)
             s.I_immed @= concat(sext(s.IR[31], 20), s.IR[20:32])
-            s.U_immed @= concat(s.IR[12:32], sext(0, 12))
+            s.U_immed @= concat(s.IR[12:32], Bits12(0))
             s.B_immed @= concat(
                 sext(s.IR[31], 20),
                 s.IR[7],
                 s.IR[25:31],
                 s.IR[8:12],
-                sext(0, 1)
+                Bits1(0)
             )
             s.J_immed @= concat(
                 sext(s.IR[31], 12),
                 s.IR[12:20],
                 s.IR[20],
                 s.IR[21:31],
-                sext(0, 1)
+                Bits1(0)
             )
 
         @update_ff
         def assign_de_ex():
-            if not s.stall_de:
+            if ~s.stall_de:
                 s.de_ex_inst <<= s.de_inst
                 s.de_ex_opA <<= s.aluAin
                 s.de_ex_opB <<= s.aluBin
@@ -238,36 +237,37 @@ class OTTER_MCU(Component):
 
         # HAZARD DETECTION ---------------------------------------------------
         # insert 1 bubble on load-use, stall if and de
-
-        ld_use_hazard = ((not s.if_de_invalid) and (not s.de_ex_invalid) and
-                        ((s.de_ex_inst.memRead2 and
-                        (s.de_inst.rs1 == s.de_ex_inst.rd and s.de_inst.rs1_used or
-                        (s.de_inst.rs2 == s.de_ex_inst.rd and s.de_inst.rs2_used)))))
-        s.stall_if = ld_use_hazard
-        s.stall_pc = ld_use_hazard
-        s.stall_de = ld_use_hazard
-
-        # For instruction that is branch/jump, if changes the PC,
-        branch_taken = ((not s.de_ex_invalid) and (s.pc_sel != 0))
+        @update
+        def hazard_detection():
+            ld_use_hazard = ((~s.if_de_invalid) & (~s.de_ex_invalid) &
+                            ((s.de_ex_inst.memRead2 &
+                            ((s.de_inst.rs1 == s.de_ex_inst.rd) & s.de_inst.rs1_used |
+                            ((s.de_inst.rs2 == s.de_ex_inst.rd) & s.de_inst.rs2_used)))))
+            s.stall_if @= ld_use_hazard
+            s.stall_pc @= ld_use_hazard
+            s.stall_de @= ld_use_hazard
 
         @update_ff
         def assign_if_de_invalid():
+            # For instruction that is branch/jump, if changes the PC,
+            branch_taken = ((~s.de_ex_invalid) & (s.pc_sel != 0))
+
             if(s.reset):
                 s.if_de_invalid <<= 1
                 s.de_ex_invalid <<= 1
                 s.ex_mem_invalid <<= 1
                 s.mem_wb_invalid <<= 1
             else:
-                if not s.stall_if:
+                if ~s.stall_if:
                     s.if_de_invalid <<= branch_taken
-                if not s.stall_de:
+                if ~s.stall_de:
                     s.de_ex_invalid <<= s.if_de_invalid | branch_taken
-                elif not s.stall_ex:
+                elif ~s.stall_ex:
                     s.de_ex_invalid <<= 1
 
-                if not s.stall_ex:
+                if ~s.stall_ex:
                     s.ex_mem_invalid <<= s.de_ex_invalid
-                if not s.stall_mem:
+                if ~s.stall_mem:
                     s.mem_wb_invalid <<= s.ex_mem_invalid
 
         # Execute stage -----------------------------------------------------------
@@ -282,15 +282,25 @@ class OTTER_MCU(Component):
         s.ALU = OTTER_ALU()
 
         # Branch Condition Generator
+        s.A_neg = Wire(1)
+        s.B_neg = Wire(1)
         @update
         def branch_cond_gen():
-            s.br_lt @= signed_lt(s.opA_forwarded, s.opB_forwarded)
+            # for signed less than
+            s.A_neg @= s.opA_forwarded[31]
+            s.B_neg @= s.opB_forwarded[31]
+
+            s.br_lt @= (
+                (s.A_neg & ~s.B_neg) | # A is negative, B is positive
+                (~(s.A_neg | s.B_neg) & (s.opA_forwarded < s.opB_forwarded)) # both are positive and A is smaller
+            )
+
             s.br_eq @= s.opA_forwarded == s.opB_forwarded
             s.br_ltu @= s.opA_forwarded < s.opB_forwarded
 
-        s.brn_cond = Wire(32)
+        s.brn_cond = Wire(1)
         @update
-        def brn_cond():
+        def branch_unit():
             if s.de_ex_inst.func3 == 0b000:
                 s.brn_cond @= s.br_eq
             elif s.de_ex_inst.func3 == 0b001:
@@ -326,7 +336,7 @@ class OTTER_MCU(Component):
 
         @update_ff
         def update_ex_mem():
-            if not s.stall_ex:
+            if ~s.stall_ex:
                 s.ex_mem_aluRes <<= s.aluResult
                 s.ex_mem_inst <<= s.de_ex_inst
                 s.ex_mem_rs2 <<= s.rs2_forwarded
@@ -335,8 +345,12 @@ class OTTER_MCU(Component):
         s.mem_wb_aluRes = Wire(32)
 
         s.mem_enable = Wire(1)
-        s.mem_Wenable = (not s.ex_mem_invalid) and s.ex_mem_inst.memWrite
-        s.mem_Renable = (not s.ex_mem_invalid) and s.ex_mem_inst.memRead2
+        s.mem_Wenable = Wire(1)
+        s.mem_Renable = Wire(1)
+        @update
+        def mem_access():
+            s.mem_Wenable @= (~s.ex_mem_invalid) & s.ex_mem_inst.memWrite
+            s.mem_Renable @= (~s.ex_mem_invalid) & s.ex_mem_inst.memRead2
 
         # TODO: replace with pymtl memory modules
         s.memory = OTTER_mem_byte()
@@ -361,21 +375,22 @@ class OTTER_MCU(Component):
 
         @update_ff
         def update_mem_wb():
-            if not s.stall_mem:
+            if ~s.stall_mem:
                 s.mem_wb_inst <<= s.ex_mem_inst
                 s.mem_wb_aluRes <<= s.ex_mem_aluRes
 
         # Writeback stage ----------------------------------------------------------
 
-        s.wb_enable = (not s.stall_wb) and (not s.mem_wb_invalid) and s.mem_wb_inst.regWrite
-
         # creating multiplexor to select reg write back data
         @update
         def mux_rfIn():
+            s.wb_enable @= (~s.stall_wb) & (~s.mem_wb_invalid) & s.mem_wb_inst.regWrite
+
             if s.mem_wb_inst.rf_wr_sel == 0:
                 s.rfIn @= s.mem_wb_inst.pc + 4
-            elif s.mem_wb_inst.rf_wr_sel == 1:
-                s.rfIn @= s.csr_reg
+            # TODO: system instructions (see CU_DECODER)
+            # elif s.mem_wb_inst.rf_wr_sel == 1:
+            #     s.rfIn @= s.csr_reg
             elif s.mem_wb_inst.rf_wr_sel == 2:
                 s.rfIn @= s.mem_data
             elif s.mem_wb_inst.rf_wr_sel == 3:
@@ -384,27 +399,35 @@ class OTTER_MCU(Component):
         # Forwarding Logic ---------------------------------------------------------
         s.valid_forward_from_mem = Wire(1)
         s.valid_forward_from_wb = Wire(1)
-        s.valid_forward_from_mem //= (s.ex_mem_inst.regWrite and not s.ex_mem_invalid)
-        s.valid_forward_from_wb //= (s.mem_wb_inst.regWrite and not s.mem_wb_invalid)
-
-        s.opA_forwarded //= s.de_ex_opA
-        s.opB_forwarded //= s.de_ex_opB
-        s.rs2_forwarded //= s.de_ex_rs2
 
         @update
         def mux_opA_forwarded():
-            if s.valid_forward_from_mem and (s.ex_mem_inst.rd == s.de_ex_inst.rs1) and s.de_ex_inst.rs1_used:
-                s.opA_forwarded = s.ex_mem_aluRes
-            elif s.valid_forward_from_wb and (s.mem_wb_inst.rd == s.de_ex_inst.rs1) and s.de_ex_inst.rs1_used:
-                s.opA_forwarded = s.rfIn
+            s.valid_forward_from_mem @= (s.ex_mem_inst.regWrite & ~s.ex_mem_invalid)
+            s.valid_forward_from_wb @= (s.mem_wb_inst.regWrite & ~s.mem_wb_invalid)
 
-            if s.valid_forward_from_mem and (s.ex_mem_inst.rd == s.de_ex_inst.rs2) and s.de_ex_inst.rs2_used:
+            s.opA_forwarded @= s.de_ex_opA
+            s.opB_forwarded @= s.de_ex_opB
+            s.rs2_forwarded @= s.de_ex_rs2
+
+            if s.valid_forward_from_mem & (s.ex_mem_inst.rd == s.de_ex_inst.rs1) & s.de_ex_inst.rs1_used:
+                s.opA_forwarded @= s.ex_mem_aluRes
+            elif s.valid_forward_from_wb & (s.mem_wb_inst.rd == s.de_ex_inst.rs1) & s.de_ex_inst.rs1_used:
+                s.opA_forwarded @= s.rfIn
+
+            if s.valid_forward_from_mem & (s.ex_mem_inst.rd == s.de_ex_inst.rs2) & s.de_ex_inst.rs2_used:
                 if s.de_ex_inst.opcode != STORE:
-                    s.opB_forwarded = s.ex_mem_aluRes
+                    s.opB_forwarded @= s.ex_mem_aluRes
                 else:
-                    s.rs2_forwarded = s.ex_mem_aluRes
-            elif s.valid_forward_from_wb and (s.mem_wb_inst.rd == s.de_ex_inst.rs2) and s.de_ex_inst.rs2_used:
+                    s.rs2_forwarded @= s.ex_mem_aluRes
+            elif s.valid_forward_from_wb & (s.mem_wb_inst.rd == s.de_ex_inst.rs2) & s.de_ex_inst.rs2_used:
                 if s.de_ex_inst.opcode != STORE:
-                    s.opB_forwarded = s.rfIn
+                    s.opB_forwarded @= s.rfIn
                 else:
-                    s.rs2_forwarded = s.rfIn
+                    s.rs2_forwarded @= s.rfIn
+
+    def line_trace(s):
+        """
+        $monitor("IF: %4h, DE: %4h (%s)\t EX: %4h (%s)\t MEM: %4h (%s)\t WB: %4h (%0s)", pc,de_inst.pc,de_inst.opcode.name(),de_ex_inst.pc,de_ex_inst.opcode.name(),ex_mem_inst.pc,ex_mem_inst.opcode.name(),mem_wb_inst.pc,mem_wb_inst.opcode.name());
+        """
+        return ""
+        return "IF: %4h, DE: %4h (%s)\t EX: %4h (%s)\t MEM: %4h (%s)\t WB: %4h (%0s)" % (s.pc, s.de_inst.pc, s.de_inst.opcode.name(), s.de_ex_inst.pc, s.de_ex_inst.opcode.name(), s.ex_mem_inst.pc, s.ex_mem_inst.opcode.name(), s.mem_wb_inst.pc, s.mem_wb_inst.opcode.name())

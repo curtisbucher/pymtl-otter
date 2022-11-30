@@ -23,9 +23,9 @@ class OTTER_mem_byte(Component, Placeholder):
         s.MEM_ADDR1 = InPort(32)    #Instruction Memory Port
         s.MEM_ADDR2 = InPort(32)    #Data Memory Port
         s.MEM_DIN2 = InPort(32)
-        s.MEM_WRITE2 = InPort(32)
-        s.MEM_READ1 = InPort(32)
-        s.MEM_READ2 = InPort(32)
+        s.MEM_WRITE2 = InPort()
+        s.MEM_READ1 = InPort()
+        s.MEM_READ2 = InPort()
         s.IO_IN = InPort(32)
         s.ERR = OutPort()
         s.MEM_SIZE = InPort(2)
