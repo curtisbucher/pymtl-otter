@@ -1,6 +1,7 @@
-from pymtl3 import Component, Wire, Bits, InPort, OutPort, update, update_ff, concat, sext, Bits12, Bits1
+from pymtl3 import Component, Wire, Bits, InPort, OutPort, update, update_ff, concat, sext, Bits12, Bits1, zext
 from pymtl3.stdlib.basic_rtl.register_files import RegisterFile
 
+from src.rtl.memory import Memory
 from src.rtl.ProgCount import ProgCount
 from src.rtl.CU_Decoder import OTTER_CU_Decoder
 from src.rtl.OTTER_ALU import OTTER_ALU
@@ -82,9 +83,6 @@ class OTTER_MCU(Component):
             if ~s.stall_if:
                 s.if_de_pc <<= s.pc
 
-        s.pcWrite = not s.stall_pc
-        s.memRead1 = not s.stall_if
-
         s.opcode //= s.IR[0:7] # opcode shortcut
         # PC is byte-addressed but our memory is word addressed
         s.PC = ProgCount()
@@ -95,6 +93,9 @@ class OTTER_MCU(Component):
         # Creates a 2-to-1 multiplexor used to select the source of the next PC
         @update
         def pc_data_src():
+            s.pcWrite @= ~s.stall_pc
+            s.memRead1 @= ~s.stall_if
+
             # pc target calculations
             s.next_pc @= s.pc + 4    # PC is byte aligned, memory is word aligned
 
@@ -351,22 +352,39 @@ class OTTER_MCU(Component):
             s.mem_Wenable @= (~s.ex_mem_invalid) & s.ex_mem_inst.memWrite
             s.mem_Renable @= (~s.ex_mem_invalid) & s.ex_mem_inst.memRead2
 
-        # TODO: replace with pymtl memory modules
-        s.memory = OTTER_mem_byte()
-        s.memory.MEM_CLK //= s.clk
-        s.memory.MEM_ADDR1 //= s.pc
-        s.memory.MEM_ADDR2 //= s.ex_mem_aluRes
-        s.memory.MEM_DIN2 //= s.ex_mem_rs2
-        s.memory.MEM_WRITE2 //= s.mem_Wenable
-        s.memory.MEM_READ1 //= s.memRead1
-        s.memory.MEM_READ2 //= s.mem_Renable
-        # ERR=,
-        s.memory.MEM_DOUT1 //= s.IR
-        s.memory.MEM_DOUT2 //= s.mem_data
-        s.memory.IO_IN //= s.IOBUS_IN
-        s.memory.IO_WR //= s.IOBUS_WR
-        s.memory.MEM_SIZE //= s.ex_mem_inst.func3[0:2]
-        s.memory.MEM_SIGN //= s.ex_mem_inst.func3[2]
+        # # TODO: replace with pymtl memory modules
+        # s.memory = OTTER_mem_byte()
+        # s.memory.MEM_CLK //= s.clk
+        # s.memory.MEM_ADDR1 //= s.pc
+        # s.memory.MEM_ADDR2 //= s.ex_mem_aluRes
+        # s.memory.MEM_DIN2 //= s.ex_mem_rs2
+        # s.memory.MEM_WRITE2 //= s.mem_Wenable
+        # s.memory.MEM_READ1 //= s.memRead1
+        # s.memory.MEM_READ2 //= s.mem_Renable
+        # # ERR=,
+        # s.memory.MEM_DOUT1 //= s.IR
+        # s.memory.MEM_DOUT2 //= s.mem_data
+        # s.memory.IO_IN //= s.IOBUS_IN
+        # s.memory.IO_WR //= s.IOBUS_WR
+        # s.memory.MEM_SIZE //= s.ex_mem_inst.func3[0:2]
+        # s.memory.MEM_SIGN //= s.ex_mem_inst.func3[2]
+
+        # TODO: implement as MagicMemoryCL
+        s.memory = Memory(
+            mk_bits(32),
+            num_entries=2**14,
+            rd_ports=2,
+            wr_ports=1,
+            reset_value=0,
+            file="/home/cubucher/Desktop/pymtl-otter/src/rtl/testall.mem"
+        )
+        s.memory.raddr[0] //= s.pc[0:14]
+        s.memory.raddr[1] //= s.ex_mem_aluRes[0:14]
+        s.memory.waddr[0] //= s.ex_mem_aluRes[0:14]
+        s.memory.wdata[0] //= s.ex_mem_rs2
+        s.memory.wen[0] //= s.mem_Wenable
+        s.memory.rdata[0] //= s.IR
+        s.memory.rdata[1] //= s.mem_data
 
         # IO
         s.IOBUS_ADDR //= s.ex_mem_aluRes
@@ -425,4 +443,4 @@ class OTTER_MCU(Component):
                     s.rs2_forwarded @= s.rfIn
 
     def line_trace(s):
-        return f"IF: {s.pc}, DE: {s.de_inst.pc} ({opcodes[s.de_inst.opcode.uint()]}), EX: {s.de_ex_inst.pc} ({opcodes[s.de_ex_inst.opcode.uint()]}), MEM: {s.ex_mem_inst.pc} ({opcodes[s.ex_mem_inst.opcode.uint()]}), WB: {s.mem_wb_inst.pc} ({opcodes[s.mem_wb_inst.opcode.uint()]})"
+        return f"IF: {s.pc_value}, DE: {s.de_inst.pc} ({opcodes[s.de_inst.opcode.uint()]:6}), EX: {s.de_ex_inst.pc} ({opcodes[s.de_ex_inst.opcode.uint()]:6}), MEM: {s.ex_mem_inst.pc} ({opcodes[s.ex_mem_inst.opcode.uint()]:6}), WB: {s.mem_wb_inst.pc} ({opcodes[s.mem_wb_inst.opcode.uint()]:6})"
