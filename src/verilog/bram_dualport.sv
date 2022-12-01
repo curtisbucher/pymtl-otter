@@ -52,7 +52,8 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
    logic [31:0] memory [0:2**ACTUAL_WIDTH-1];
 
     initial begin
-        $readmemh("otter_memory.mem", memory, 0, 2**ACTUAL_WIDTH-1);
+        memory[0] = 32'hDEADBEEF;
+        // $readmemh("otter_memory.mem", memory, 0, 2**ACTUAL_WIDTH-1);
     end
 
 
@@ -132,9 +133,9 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
     (* rom_style="{distributed | block}" *)
     (* ram_decomp = "power" *) logic [31:0] memory [0:2**ACTUAL_WIDTH-1];
 
-    // initial begin
-    //     $readmemh("otter_memory.mem", memory, 0, 2**ACTUAL_WIDTH-1);
-    // end
+    initial begin
+        $readmemh("otter_memory.mem", memory, 0, 2**ACTUAL_WIDTH-1);
+    end
 
 
     always_comb

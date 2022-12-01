@@ -31,6 +31,21 @@ OP_IMM = 0b0010011
 OP = 0b0110011
 SYSTEM = 0b0001111
 
+# for printing
+opcodes = {
+    0: "NULL",
+    0b0110111 : "LUI",
+    0b0010111 : "AUIPC",
+    0b1101111 : "JAL",
+    0b1100111 : "JALR",
+    0b1100011 : "BRANCH",
+    0b0000011 : "LOAD",
+    0b0100011 : "STORE",
+    0b0010011 : "OP_IMM",
+    0b0110011 : "OP",
+    0b0001111 : "SYSTEM",
+}
+
 # ALU FUNCTIONS
 ALU_ADD = 0b0000
 ALU_SUB = 0b1000
@@ -44,3 +59,19 @@ ALU_SLT = 0b0010
 ALU_SLTU = 0b0011
 ALU_LUI_COPY = 0b1001
 ALU_MUL = 0b1010
+
+# for printing
+alu_funs = {
+    0b0000 : "ALU_ADD",
+    0b1000 : "ALU_SUB",
+    0b0110 : "ALU_OR",
+    0b0111 : "ALU_AND",
+    0b0100 : "ALU_XOR",
+    0b0101 : "ALU_SRL",
+    0b0001 : "ALU_SLL",
+    0b1101 : "ALU_SRA",
+    0b0010 : "ALU_SLT",
+    0b0011 : "ALU_SLTU",
+    0b1001 : "ALU_LUI_COPY",
+    0b1010 : "ALU_MUL",
+}

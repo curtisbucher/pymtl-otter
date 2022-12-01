@@ -425,8 +425,4 @@ class OTTER_MCU(Component):
                     s.rs2_forwarded @= s.rfIn
 
     def line_trace(s):
-        """
-        $monitor("IF: %4h, DE: %4h (%s)\t EX: %4h (%s)\t MEM: %4h (%s)\t WB: %4h (%0s)", pc,de_inst.pc,de_inst.opcode.name(),de_ex_inst.pc,de_ex_inst.opcode.name(),ex_mem_inst.pc,ex_mem_inst.opcode.name(),mem_wb_inst.pc,mem_wb_inst.opcode.name());
-        """
-        return ""
-        return "IF: %4h, DE: %4h (%s)\t EX: %4h (%s)\t MEM: %4h (%s)\t WB: %4h (%0s)" % (s.pc, s.de_inst.pc, s.de_inst.opcode.name(), s.de_ex_inst.pc, s.de_ex_inst.opcode.name(), s.ex_mem_inst.pc, s.ex_mem_inst.opcode.name(), s.mem_wb_inst.pc, s.mem_wb_inst.opcode.name())
+        return f"IF: {s.pc}, DE: {s.de_inst.pc} ({opcodes[s.de_inst.opcode.uint()]}), EX: {s.de_ex_inst.pc} ({opcodes[s.de_ex_inst.opcode.uint()]}), MEM: {s.ex_mem_inst.pc} ({opcodes[s.ex_mem_inst.opcode.uint()]}), WB: {s.mem_wb_inst.pc} ({opcodes[s.mem_wb_inst.opcode.uint()]})"
