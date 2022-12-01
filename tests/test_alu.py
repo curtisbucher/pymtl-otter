@@ -18,7 +18,10 @@ class TestALU(unittest.TestCase):
             s.dut.elaborate()
 
             s.dut.set_metadata( VerilogTranslationImportPass.enable, True )
+            s.dut.set_metadata( VerilogPlaceholderPass.top_module, 'OTTER_ALU' )
+            s.dut.set_metadata( VerilogPlaceholderPass.src_file, path.dirname(__file__) + '/../src/verilog/ArithLogicUnit.sv' )
             s.dut.apply(VerilogPlaceholderPass())
+
             s.dut = VerilogTranslationImportPass()( s.dut )
 
             s.dut.apply(DefaultPassGroup(textwave=False, linetrace=True))

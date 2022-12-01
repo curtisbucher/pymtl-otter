@@ -18,12 +18,18 @@ class TestMCU(unittest.TestCase):
             s.dut.elaborate()
 
             s.dut.CU_DECODER.set_metadata( VerilogTranslationImportPass.enable, True )
+            s.dut.CU_DECODER.set_metadata( VerilogPlaceholderPass.top_module, 'OTTER_CU_Decoder' )
+            s.dut.CU_DECODER.set_metadata( VerilogPlaceholderPass.src_file, path.dirname(__file__) + '/../src/verilog/CU_Decoder.sv' )
             s.dut.CU_DECODER.apply(VerilogPlaceholderPass())
 
             s.dut.ALU.set_metadata( VerilogTranslationImportPass.enable, True )
+            s.dut.ALU.set_metadata( VerilogPlaceholderPass.top_module, 'OTTER_ALU' )
+            s.dut.ALU.set_metadata( VerilogPlaceholderPass.src_file, path.dirname(__file__) + '/../src/verilog/ArithLogicUnit.sv' )
             s.dut.ALU.apply(VerilogPlaceholderPass())
 
             s.dut.memory.set_metadata( VerilogTranslationImportPass.enable, True )
+            s.dut.memory.set_metadata( VerilogPlaceholderPass.top_module, 'OTTER_mem_byte' )
+            s.dut.memory.set_metadata( VerilogPlaceholderPass.src_file, path.dirname(__file__) + '/../src/verilog/bram_dualport.sv' )
             s.dut.memory.set_metadata( VerilogPlaceholderPass.v_include, [path.dirname(__file__) + '/../src/rtl'] )
             s.dut.memory.apply(VerilogPlaceholderPass())
 

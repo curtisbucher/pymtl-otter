@@ -126,7 +126,7 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
     logic [31:0] ioIn_buffer=0;
     logic [NUM_COL-1:0] weA;
 
-    assign memAddr1 =MEM_ADDR1[ACTUAL_WIDTH+1:2];
+     assign memAddr1 =MEM_ADDR1[ACTUAL_WIDTH+1:2];
     assign memAddr2 =MEM_ADDR2[ACTUAL_WIDTH+1:2];
 
     (* rom_style="{distributed | block}" *)
@@ -135,6 +135,7 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
     // initial begin
     //     $readmemh("otter_memory.mem", memory, 0, 2**ACTUAL_WIDTH-1);
     // end
+
 
     always_comb
     begin

@@ -3,7 +3,6 @@ from pymtl3.stdlib.basic_rtl.register_files import RegisterFile
 
 from src.rtl.ProgCount import ProgCount
 from src.rtl.CU_Decoder import OTTER_CU_Decoder
-from src.rtl.registerFile import OTTER_registerFile
 from src.rtl.OTTER_ALU import OTTER_ALU
 from src.rtl.bram_dualport import OTTER_mem_byte
 from src.common.util import *
