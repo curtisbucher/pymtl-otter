@@ -1,11 +1,11 @@
 from pymtl3 import Component, Wire, Bits, InPort, OutPort, update, update_ff, concat, sext, Bits12, Bits1, zext
-from pymtl3.stdlib.basic_rtl.register_files import RegisterFile
 
 from src.rtl.memory import Memory
 from src.rtl.ProgCount import ProgCount
 from src.rtl.CU_Decoder import OTTER_CU_Decoder
 from src.rtl.OTTER_ALU import OTTER_ALU
 from src.rtl.bram_dualport import OTTER_mem_byte
+from src.rtl.registerFile import RegisterFile
 from src.common.util import *
 from src.common.consts import *
 
@@ -181,25 +181,25 @@ class OTTER_MCU(Component):
                 s.aluBin @= s.de_inst.pc
 
         # Create RISC-V register file
-        # s.RF = OTTER_registerFile()
-        # s.RF.rf_rs1 //= s.de_inst.rs1
-        # s.RF.rf_rs2 //= s.de_inst.rs2
-        # s.RF.rf_rd //= s.mem_wb_inst.rd
-        # s.RF.rf_in //= s.rfIn
-        # s.RF.rf_wb_enable //= s.wb_enable
-        # s.RF.rf_outA //= s.A
-        # s.RF.rf_outB //= s.B
-        # s.RF.rf_clk //= s.clk
-        s.RF = RegisterFile(
-            mk_bits(32), nregs=32, rd_ports=2, wr_ports=1, const_zero=True
-        )
-        s.RF.raddr[0] //= s.de_inst.rs1
-        s.RF.raddr[1] //= s.de_inst.rs2
-        s.RF.waddr[0] //= s.mem_wb_inst.rd
-        s.RF.wdata[0] //= s.rfIn
-        s.RF.wen[0] //= s.wb_enable
-        s.RF.rdata[0] //= s.A
-        s.RF.rdata[1] //= s.B
+        s.RF = RegisterFile()
+        s.RF.Read1 //= s.de_inst.rs1
+        s.RF.Read2 //= s.de_inst.rs2
+        s.RF.WriteReg //= s.mem_wb_inst.rd
+        s.RF.WriteData //= s.rfIn
+        s.RF.RegWrite //= s.wb_enable
+        s.RF.Data1 //= s.A
+        s.RF.Data2 //= s.B
+
+        # s.RF = RegisterFile(
+        #     mk_bits(32), nregs=32, rd_ports=2, wr_ports=1, const_zero=True
+        # )
+        # s.RF.raddr[0] //= s.de_inst.rs1
+        # s.RF.raddr[1] //= s.de_inst.rs2
+        # s.RF.waddr[0] //= s.mem_wb_inst.rd
+        # s.RF.wdata[0] //= s.rfIn
+        # s.RF.wen[0] //= s.wb_enable
+        # s.RF.rdata[0] //= s.A
+        # s.RF.rdata[1] //= s.B
 
         # generate immediates
         @update
@@ -280,6 +280,11 @@ class OTTER_MCU(Component):
 
         # Creating ALU
         s.ALU = OTTER_ALU()
+        s.ALU.op //= s.de_ex_inst.alu_fun
+        s.ALU.a //= s.opA_forwarded
+        s.ALU.b //= s.opB_forwarded
+        s.ALU.out //= s.aluResult
+
 
         # Branch Condition Generator
         s.A_neg = Wire(1)

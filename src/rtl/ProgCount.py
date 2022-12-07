@@ -9,6 +9,6 @@ class ProgCount( Component ):
         @update_ff
         def inc_pc():
             if s.reset == 0b1:
-                s.PC_COUNT <<= 0
+                s.PC_COUNT <<= -4
             elif s.PC_LD == 0b1:
                 s.PC_COUNT <<= s.PC_DIN
