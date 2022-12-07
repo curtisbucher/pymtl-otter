@@ -35,7 +35,8 @@ class TestMCU(unittest.TestCase):
 
             s.dut = VerilogTranslationImportPass()( s.dut )
 
-            s.dut.apply(DefaultPassGroup(textwave=False, linetrace=True))
+            s.dut.apply(DefaultPassGroup(textwave=True, linetrace=True, vcdwave="vcd/test_mcu"))
+
         s.dut.sim_reset()
 
     def tearDown(s) -> None:
@@ -43,11 +44,27 @@ class TestMCU(unittest.TestCase):
         if s.dut.sim_cycle_count():
             print("final:", s.dut.line_trace())
 
-    def test_init(s):
+        # print registers
+        print("\nRegisters:")
+        reg_names = ["zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2", "s0", "s1", "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", "s10", "s11", "t3", "t4", "t5", "t6"]
+        for r, n in zip(s.dut.RF.regs, reg_names):
+            print(f"{n:4} : {r}")
+
+    def test_testall(s):
+        """Test all instructions, with testall.mem"""
+        FAIL_ADDR = 0x4b0
         s.dut.sim_reset()
-        for _ in range(100):
+
+        # Getting program started, so PC > 0
+        while not s.dut.pc_value:
             s.dut.sim_tick()
-        assert False
+
+        # Run until testall fails or program restarts (success)
+        while s.dut.pc_value:
+            s.dut.sim_tick()
+            # goes to FAIL_ADDR when testall is fails
+            assert s.dut.pc_value != FAIL_ADDR, "Testall failed at cycle {}".format(s.dut.sim_cycle_count())
+
 
 if __name__ == "__main__":
     unittest.main()
