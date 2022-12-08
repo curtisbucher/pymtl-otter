@@ -10,7 +10,7 @@ from src.common.util import *
 from src.common.consts import *
 
 class OTTER_MCU(Component):
-    def construct(s):
+    def construct(s, mem_file=None):
         s.INTR = InPort(1)
         s.IOBUS_IN = InPort(32)
         s.IOBUS_OUT = OutPort(32)
@@ -381,7 +381,7 @@ class OTTER_MCU(Component):
             rd_ports=2,
             wr_ports=1,
             reset_value=0,
-            file="/home/cubucher/Desktop/pymtl-otter/src/rtl/testall.mem"
+            file=mem_file,
         )
         s.memory.raddr[0] //= s.pc[0:14]
         s.memory.raddr[1] //= s.ex_mem_aluRes[0:14]

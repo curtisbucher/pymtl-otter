@@ -8,7 +8,8 @@ from pymtl3 import (
     Wire,
     mk_bits,
     Bits1,
-    Bits32
+    Bits32,
+    update_once,
 )
 
 # TODO: make byte addressable
@@ -31,12 +32,6 @@ class Memory(Component):
         # for byte addressable memory
         addr_shift = clog2(Type.nbits >> 3)
 
-        # loading instruction memory from file
-        if file:
-            with open(file, "r") as f:
-                for i, line in enumerate(f):
-                    s.mem[i] = Bits32(int(line, 16))
-
         @update
         def up_rf_read():
             for i in range(rd_ports):
@@ -48,8 +43,14 @@ class Memory(Component):
         @update_ff
         def up_rf_write():
             if s.reset:
-                for i in range(num_entries):
-                    s.mem[i] <<= reset_value
+                # loading instruction memory from file
+                i = 0
+                if file:
+                    with open(file, "r") as f:
+                        for i, line in enumerate(f):
+                            s.mem[i] <<= int(line, 16)
+                for e in range(i + 1, num_entries):
+                    s.mem[e] <<= reset_value
             else:
                 for i in range(wr_ports):
                     if s.wen[i]:
