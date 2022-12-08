@@ -14,7 +14,7 @@ class TestMCU(unittest.TestCase):
     def setUp(s) -> None:
         # runs before every test
         if not hasattr(s, "dut"):
-            s.dut = OTTER_MCU(mem_file="/home/cubucher/Desktop/pymtl-otter/src/mem/testAll_noHaz_modified3.mem")
+            s.dut = OTTER_MCU(mem_file="/home/cubucher/Desktop/pymtl-otter/src/mem/testAll_noHaz_mod.mem")
             s.dut.elaborate()
 
             s.dut.CU_DECODER.set_metadata( VerilogTranslationImportPass.enable, True )
