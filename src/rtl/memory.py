@@ -27,18 +27,21 @@ class Memory(Component):
         s.wdata = [InPort(Type) for _ in range(wr_ports)]
         s.wen = [InPort(Bits1) for _ in range(wr_ports)]
 
+        s.mem_read1 = InPort()
+        s.mem_read2 = InPort()
+
+        s.mem_size = InPort(2)
+        s.sign = InPort(1)
+
+
         s.mem = [Wire(Type) for _ in range(num_entries)]
 
         # for byte addressable memory
         addr_shift = clog2(Type.nbits >> 3)
 
-        @update
-        def up_rf_read():
-            for i in range(rd_ports):
-                # TODO: CL debugging
-                # assert not (s.raddr[i] % (Type.nbits // 8)), f"Address must be {Type.nbits // 8}-byte aligned"
-                # byte addressable
-                s.rdata[i] @= s.mem[s.raddr[i] >> addr_shift]
+        # for latching data on mem_read1, mem_read2
+        s.rdata1_latch = Wire(Type)
+        s.rdata2_latch = Wire(Type)
 
         @update_ff
         def up_rf_write():
@@ -57,6 +60,31 @@ class Memory(Component):
                         # TODO: CL debugging
                         # assert not (s.waddr[i] % (Type.nbits // 8)), f"Address must be {Type.nbits // 8}-byte aligned"
                         s.mem[s.waddr[i] >> addr_shift] <<= s.wdata[i]
+
+        @update_ff
+        def up_rf_read_latch():
+            if(s.mem_read1):
+                s.rdata1_latch <<= s.mem[s.raddr[0] >> addr_shift]
+            if(s.mem_read2):
+                s.rdata2_latch <<= s.mem[s.raddr[1] >> addr_shift]
+
+        @update
+        def up_rf_read():
+            # for i in range(rd_ports):
+            #     # TODO: CL debugging
+            #     # assert not (s.raddr[i] % (Type.nbits // 8)), f"Address must be {Type.nbits // 8}-byte aligned"
+            #     # byte addressable
+            #     if(s.mem_read1):
+            #         s.rdata[i] @= s.mem[s.raddr[i] >> addr_shift]
+            #     s.rdata[i] @= s.mem[s.raddr[i] >> addr_shift]
+            if(s.mem_read1):
+                s.rdata[0] @= s.mem[s.raddr[0] >> addr_shift]
+            else:
+                s.rdata[0] @=s.rdata1_latch
+            if(s.mem_read2):
+                s.rdata[1] @= s.mem[s.raddr[1] >> addr_shift]
+            else:
+                s.rdata[1] @=s.rdata2_latch
 
     def line_trace(s):
         nshown = min(32, len(s.mem))

@@ -1,10 +1,10 @@
 # --cov-report=html, -n auto
 test:
-	pytest tests/ --cov=src --cov-branch --cov-report=term-missing --cov-fail-under=90; rm -r *_noparam*;
+	pytest -s tests/ --cov=src --cov-branch --cov-report=term-missing --cov-fail-under=90; rm -r *_noparam*;
 
 # not working rn, only works with io from ramp-core
 test-verilog:
-	pytest tests/ --test-verilog --cov=src --cov-branch --cov-report=term-missing --cov-fail-under=90; rm -r *_noparam*;
+	pytest -s tests/ --test-verilog --cov=src --cov-branch --cov-report=term-missing --cov-fail-under=90; rm -r *_noparam*;
 
 # Test in Python
 format:

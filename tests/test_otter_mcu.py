@@ -14,7 +14,7 @@ class TestMCU(unittest.TestCase):
     def setUp(s) -> None:
         # runs before every test
         if not hasattr(s, "dut"):
-            s.dut = OTTER_MCU(mem_file="/home/cubucher/Desktop/pymtl-otter/src/mem/testAll_noHaz_modified.mem")
+            s.dut = OTTER_MCU(mem_file="/home/cubucher/Desktop/pymtl-otter/src/mem/testAll_noHaz_modified3.mem")
             s.dut.elaborate()
 
             s.dut.CU_DECODER.set_metadata( VerilogTranslationImportPass.enable, True )
@@ -39,7 +39,7 @@ class TestMCU(unittest.TestCase):
 
         s.dut.sim_reset()
         for i, x in enumerate(s.dut.memory.mem):
-            print(f"{i:4} : {x}")
+            print(f"{hex(i*4):4} : {x}")
 
     def tearDown(s) -> None:
         # runs after every test
@@ -54,15 +54,15 @@ class TestMCU(unittest.TestCase):
 
     def test_testall(s):
         """Test all instructions, with testall.mem"""
-        FAIL_ADDR = 0x4b0
+        FAIL_ADDR = 0x4b4
         s.dut.sim_reset()
 
         # Getting program started, so PC > 0
-        while not s.dut.pc_value:
+        while s.dut.pc_value < 5:
             s.dut.sim_tick()
 
         # Run until testall fails or program restarts (success)
-        while s.dut.pc_value and s.dut.pc_value < 0x500:
+        while s.dut.pc_value > 5 and s.dut.pc_value < 0x500:
             s.dut.sim_tick()
             # goes to FAIL_ADDR when testall is fails
             assert s.dut.pc_value != FAIL_ADDR, "Testall failed at cycle {}".format(s.dut.sim_cycle_count())

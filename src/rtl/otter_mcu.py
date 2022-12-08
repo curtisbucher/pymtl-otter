@@ -391,6 +391,13 @@ class OTTER_MCU(Component):
         s.memory.rdata[0] //= s.IR
         s.memory.rdata[1] //= s.mem_data
 
+        s.memory.mem_read1 //= s.memRead1
+        s.memory.mem_read2 //= s.mem_Renable
+
+        s.memory.mem_size //= s.ex_mem_inst.func3[0:2]
+        s.memory.sign //= s.ex_mem_inst.func3[2]
+
+
         # IO
         s.IOBUS_ADDR //= s.ex_mem_aluRes
         s.IOBUS_OUT //= s.ex_mem_rs2
@@ -404,6 +411,8 @@ class OTTER_MCU(Component):
         # Writeback stage ----------------------------------------------------------
 
         # creating multiplexor to select reg write back data
+        s.rf_wr_sel = Wire(2)
+        s.rf_wr_sel //= s.mem_wb_inst.rf_wr_sel
         @update
         def mux_rfIn():
             s.wb_enable @= (~s.stall_wb) & (~s.mem_wb_invalid) & s.mem_wb_inst.regWrite
